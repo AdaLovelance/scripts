@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Recibo un fichero de texto como párametro
+# El fichero debe contener una lista de nombres de máquinas, una por fila para migrar a otro servidor
+# Recibo el servidor a donde voy a migrar como segúndo parámetro
+# Paro las máquinas y realizo la migración con rsync y vuelvo a levantar el contenedor en el destino remoto
+# bash scriptmigra fichero servidor
+
+file=$1
+server=$2
+
+if [ "$1" == "-h" ]; then
+  echo "Usage: `basename $0` "
+  echo "Recibo un fichero de texto como primer parámetro"
+  echo "El fichero debe contener una lista de nombres de máquinas, una por fila para migrar a otro servidor"
+  echo "Paro las máquinas y realizo la migración"
+  echo "El servidor de destino ha de tener mi llave pública en su fichero '/etc/ssh/authorized_keys' "
+  echo "./scriptmigra fichero servidor"
+
+  exit 0
+fi
+
+for maq in $(cat<$file);
+   do
+
+      cd /var/lib/lxc
+      lxc-stop -n  $maq;
+      rsync -az  -e 'ssh  -i /root/.ssh/id_rsa' $maq root@$server:/var/lib/lxc/ -h --stats
+      echo $maq migrada
+      ssh  -i /root/.ssh/id_rsa root@$server "lxc-start -n $maq -d && exit"
+
+   done
